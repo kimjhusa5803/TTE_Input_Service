@@ -56,28 +56,24 @@ The Python package receives this JSON mapping file and feeds it directly into ou
 
 ---
 
-## Contingency Plans (If Vertex AI is Blocked)
+---
 
-Even if a specific NIH Terra workspace is locked down so tightly that it forcefully blocks the internal Vertex API, we can still achieve auto-mapping through fallback mechanisms:
+## Phase 1: Current Operating Model (The "Air-Gapped Handshake")
 
-### Hand-off to the Local React Dashboard (`.rda` conversion)
-Once the Python package successfully extracts the final cohort matrix from the BigQuery servers, it generates a standard `.csv` file. 
-Because the main local TTE application precisely requires `.rda` formatting to run target trial analysis robustly, a bridge utility script (`packages/omop_tte_bridge/utils/csv_to_rda.R`) has been provided. 
+Because secure Terra environments often completely restrict external internet access and live Vertex integrations are still under review for Phase 2, the **current operating standard** utilizes a manual, secure air-gap mechanism:
 
-**Workflow:**
-1. Download `trial_cohort.csv` from your Cloud workspace.
-2. Run locally: `Rscript packages/omop_tte_bridge/utils/csv_to_rda.R trial_cohort.csv TrialEmulation/data/trial_cohort.rda`
-3. The local dashboard pipeline will instantly detect this new RDA file in the Dropdown for execution!
+1. The provided Python Discovery Notebook executes securely inside the cloud, reading the internal `INFORMATION_SCHEMA`.
+2. The notebook dumps the schema summary as a compressed JSON text block directly into the Jupyter Notebook output cell.
+3. Because patient PHI is **not** included in this structural text, the researcher can securely highlight, copy, and paste this JSON block into the local `TTE_Input_Service` dashboard on their personal machine.
+4. The local web dashboard (which has safe external internet/AI access via API proxies) receives the JSON structure alongside the user's natural language prompts and generates the dialect-specific experimental BigQuery SQL.
 
-### Alternative 1: The Local Offline Dictionary
-Because many major biobanks are highly popular, their exact topological quirks are known. The `omop_tte_bridge` Python package can ship with a pre-compiled, offline JSON catalogue of known mappings. When `schema_learner` runs, it simply compares the local `INFORMATION_SCHEMA` against its internal dictionary. If it matches a known profile, it automatically routes the templates without needing to talk to a live AI.
+## Phase 2: Future Automation Roadmap (V1.5+ Vertex API)
 
-### Alternative 2: Bring-Your-Own-Key (Whitelisted Egress)
-If Vertex is blocked but general HTTP outbound traffic to external providers is allowed (e.g., standard OpenAI/Gemini REST endpoints), the package can accept a user's personal API Key to process the metadata mapping.
+The long-term goal is to phase out the manual "Air-Gapped Handshake" copy/paste steps in favor of a fully autonomous integration natively inside the cloud:
 
-### Alternative 3: The "Air-Gapped Handshake"
-If Terra enforces a complete, literal air-gap:
-1. The Python package dumps the `INFORMATION_SCHEMA` summary as a compressed JSON block directly into the Jupyter Notebook output cell.
-2. The researcher highlights, copies, and pastes this block into the local `TTE_AI` dashboard outside of Terra.
-3. The local dashboard (which has full internet access) connects to the AI to synthesize the mapping logic.
-4. The researcher uploads the resulting tiny `mapping.json` rules-file back into Terra, and the Python package uses it to build the final queries!
+### The Native Cloud API Call
+Because NIH Terra natively runs on Google Cloud Platform (GCP), it has an incredible security advantage: **Vertex AI**.
+Instead of bouncing data outward to the local dashboard, the Python package will eventually talk directly to Google's internal Vertex AI models.
+
+**Authentication:** 
+The script will use the native Jupyter Notebook Service Account credentials. The package will use GCP `Application Default Credentials` to summon a Gemini model entirely securely within the VPC boundary to automatically generate complex SQL extractions without ever leaving the cloud environment.

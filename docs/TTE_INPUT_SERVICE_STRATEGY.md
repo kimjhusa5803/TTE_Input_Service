@@ -6,22 +6,24 @@ The overarching strategy for the next milestone of the TTE_Input_Service is to p
 
 This interactive approach ensures accuracy when dealing with complex, institution-specific OMOP schemas and subtle phenotype definitions, paving the way for reliable, fully automated Target Trial Emulation (TTE) in the final phase.
 
-## The Two-Step Architectural Procedure
+## The Three-Step Operating Architecture
 
-The current UI design and underlying backend architecture are structured to support the following two-step procedure:
+The current dashboard UI and underlying Python backend architecture are purposefully structured to support the following three-step procedure, designed around strict "air-gapped" security protocols:
 
-### Step 1: Discover the Local Architecture (Schema Mapping)
-**Objective:** Standardize the local database structure and identify dialect quirks (e.g., specific table prefixes, custom datetime formats used by "NIH All of Us" or "VUMC SD").
+### Step 1: Secure Discovery (Cloud Phase via Notebooks)
+**Objective:** Standardize the local database structure and identify dialect quirks (e.g., table prefixes like `cb_search_person` used by "NIH All of Us" or standard schemas used by "VUMC SD").
 
-*   **Mechanism:** Instead of passing raw patient data (PHI), the system relies purely on database structural blueprints. The researcher executes a secure query against their `INFORMATION_SCHEMA` in their local, restricted environment (like a Terra Jupyter Notebook).
-*   **Interaction:** In the UI (Panel 1: "Paste OMOP Topology JSON"), the user pastes this schema blueprint. The AI backend consumes this JSON to map the local architecture to the standard OMOP v5.4 topology.
+*   **Mechanism:** Instead of extracting raw patient data (PHI), the researcher physically logs into their secured cloud enclave (like Terra workspaces). They execute the provided Python Jupyter Notebook (`OMOP_AllOfUs_Discovery.ipynb`), which safely discovers the `INFORMATION_SCHEMA` and bundles the blueprint.
+*   **Action:** The researcher copies the resulting JSON string from their cloud notebook.
 
-### Step 2: Interactively Generate Experimental SQL (Phenotype & Variable Mapping)
-**Objective:** Translate natural language medical phenotypes into exact SQL queries that map seamlessly into the required TTE matrix variables.
+### Step 2: Interactive Query Translation (Local Dashboard Phase)
+**Objective:** Translate natural language medical phenotypes into exact BigQuery SQL queries utilizing the architectural blueprint extracted in Step 1.
 
-*   **Mechanism:** The researcher utilizes the UI's **"Generation Mode"** set to **"Exploratory (Investigation)"**. 
-*   **Interaction:** The user inputs multiple natural language phenotype descriptions in the "NL Prompt / Rules" text area (e.g., *"Find patients exposed to Metformin with a prior diagnosis of Type 2 Diabetes"*). 
-*   **Iteration:** Upon clicking "Generate SQL", the AI engine returns an experimental BigQuery SQL script. The user can review it, tweak their natural language prompt, and regenerate the SQL iteratively. This iterative loop continues until the logic perfectly matches their intended clinical variables.
+*   **Mechanism:** The researcher switches over to the local `TTE_Input_Service` web dashboard. 
+*   **Interaction:** They paste the OMOP schema JSON into the UI and provide a natural language prompt (e.g., *"Find patients exposed to Metformin with a prior diagnosis of Type 2 Diabetes"*). 
+*   **Iteration:** The local UI routes this prompt through a generation layer to output experimental AI-assisted BigQuery SQL. The user reviews the snippet, tweaks the prompt, and iterates until the translated SQL perfectly maps their required variables.
 
-## Path to Automation
-Once the user validates that the interactive, experimental queries successfully generate the required medical cohorts, they can toggle the system to **"Final TTE Matrix (Production)"** mode. This transitions the interactive query logic into the final, automated data extraction pipeline required by the Target Trial Emulation engine.
+### Step 3: Future Automation (V1.5+ API Integration)
+**Objective:** Eradicate the manual "copy/paste" air-gapped translation layer in favor of seamless automation.
+
+*   **Roadmap Strategy:** Once the SQL mapping mechanics are proven robust via the dashboard UI, the next major version will revise the Python microservice to bypass the local web app entirely. The Python notebooks natively residing in the cloud will securely query Google Vertex AI directly, parsing complex extraction prompts internally and automatically generating the `.rda` files required by the overall TTE engine.
